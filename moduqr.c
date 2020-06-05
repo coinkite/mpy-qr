@@ -8,6 +8,7 @@
 #include <string.h>
 #include <stdlib.h>
 
+// Our object. Holds a rendered QR
 typedef struct _mp_obj_rendered_qr_t {
     mp_obj_base_t base;
 
@@ -16,9 +17,13 @@ typedef struct _mp_obj_rendered_qr_t {
     byte    *rendered;
 } mp_obj_rendered_qr_t;
 
+// buffer_for_version()
+//
 // Number of byts of buffer (worse case) needed for a specific version QR
-// - information I suppose for user
-STATIC mp_obj_t buffer_for_version(mp_obj_t x_obj)
+// - information I suppose for user ... not too useful
+//
+    STATIC mp_obj_t
+buffer_for_version(mp_obj_t x_obj)
 {
     mp_int_t ver = mp_obj_get_int(x_obj);
 
@@ -26,49 +31,120 @@ STATIC mp_obj_t buffer_for_version(mp_obj_t x_obj)
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(buffer_for_version_obj, buffer_for_version);
 
+// rendered_qr_make_new()
+//
 // Constructor: RenderedQR object
 //
-STATIC mp_obj_t rendered_qr_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *args) {
-    mp_arg_check_num(n_args, n_kw, 1, 5, false);
+    STATIC mp_obj_t
+rendered_qr_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args)
+{
+    mp_arg_check_num(n_args, n_kw, 1, 1, true);
+    mp_map_t kw_args;
+    mp_map_init_fixed_table(&kw_args, n_kw, all_args + n_args);
 
-    mp_obj_rendered_qr_t *o = m_new_obj_with_finaliser(mp_obj_rendered_qr_t);
-    o->base.type = type;
-    o->rendered = NULL;
+    enum {ARG_message, ARG_encoding, ARG_max_version, ARG_mask, ARG_ecl};
+    const mp_arg_t allowed_args[] = {
+        { MP_QSTR_message, MP_ARG_OBJ|MP_ARG_REQUIRED },
+        { MP_QSTR_encoding, MP_ARG_INT, { .u_int = 0 } },
+        { MP_QSTR_max_version, MP_ARG_INT, { .u_int = 10 } },
+        { MP_QSTR_mask, MP_ARG_INT, { .u_int = qrcodegen_Mask_AUTO } },
+        { MP_QSTR_ecl, MP_ARG_INT, { .u_int = qrcodegen_Ecc_LOW } },
+    };
+
+    mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
+    mp_arg_parse_all(n_args, all_args, &kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
     // first arg: text to encode
     mp_buffer_info_t bufinfo;
-    mp_get_buffer_raise(args[0], &bufinfo, MP_BUFFER_READ);
+    mp_get_buffer_raise(args[0].u_obj, &bufinfo, MP_BUFFER_READ);
+
+    // range checks
+    switch(args[ARG_max_version].u_int) {
+        case qrcodegen_VERSION_MIN ... qrcodegen_VERSION_MAX:
+            break;
+        default:
+            mp_raise_ValueError(MP_ERROR_TEXT("QSTR_max_version"));
+    }
+    switch(args[ARG_ecl].u_int) {
+	    case qrcodegen_Ecc_LOW:
+	    case qrcodegen_Ecc_MEDIUM:
+	    case qrcodegen_Ecc_QUARTILE:
+	    case qrcodegen_Ecc_HIGH:
+            break;
+        default:
+            mp_raise_ValueError(MP_ERROR_TEXT("ecl"));
+    }
+    switch(args[ARG_mask].u_int) {
+	    case qrcodegen_Mask_AUTO:
+	    case qrcodegen_Mask_0 ...  qrcodegen_Mask_7:
+            break;
+        default:
+            mp_raise_ValueError(MP_ERROR_TEXT("mask"));
+    }
+
 
     // get these from varargs
-    int max_version = 10;           // 408 bytes (*2 required) on stack
-    enum qrcodegen_Ecc ecl = qrcodegen_Ecc_LOW;
-    enum qrcodegen_Mask mask = qrcodegen_Mask_AUTO;
-    bool boost_ecl = true;
-
-    // convert utf-8
-    struct qrcodegen_Segment seg;
-
-    // make one segment
-	seg.mode = qrcodegen_Mode_BYTE;
-	seg.numChars = bufinfo.len;
-	seg.bitLength = calcSegmentBitLength(seg.mode, bufinfo.len);
-    seg.data = bufinfo.buf;
+    int max_version = args[ARG_max_version].u_int;      // 10 => 408 bytes (*2 required) on stack
+    enum qrcodegen_Ecc ecl = args[ARG_ecl].u_int;
+    enum qrcodegen_Mask mask = args[ARG_mask].u_int;
+    const bool boost_ecl = true;            // because why not
+    enum qrcodegen_Mode encoding = args[ARG_encoding].u_int;
     
-    // prepare an output buffer (result)
-    vstr_t vstr;
-    vstr_init_len(&vstr, qrcodegen_BUFFER_LEN_FOR_VERSION(max_version));
-
+    // prepare an output buffer (the QR result)
     uint8_t     tmp[qrcodegen_BUFFER_LEN_FOR_VERSION(max_version)];
     uint8_t     result[qrcodegen_BUFFER_LEN_FOR_VERSION(max_version)];
 
-	bool ok =  qrcodegen_encodeSegmentsAdvanced(&seg, 1, 
+    bool ok = false;
+
+    if(encoding == 0) {
+        const char *as_str = mp_obj_str_get_str(args[0].u_obj);
+
+        // auto mode: pick best mode (sic) ... slower, simplistic; assumes string input
+        ok =  qrcodegen_encodeText(as_str, tmp, result, 
+                            ecl, qrcodegen_VERSION_MIN, max_version, mask, boost_ecl);
+    } else {
+        struct qrcodegen_Segment seg;
+
+        if(encoding == qrcodegen_Mode_BYTE) {
+            // work in-place, make no assumptions about NUL bytes
+            seg.mode = qrcodegen_Mode_BYTE;
+            seg.numChars = bufinfo.len;
+            seg.bitLength = calcSegmentBitLength(seg.mode, bufinfo.len);
+            seg.data = bufinfo.buf;
+        } else {
+            // library assumes incoming is text, 0-terminated strings.
+            const char *as_str = mp_obj_str_get_str(args[0].u_obj);
+            uint8_t     encoded[strlen(as_str)+10];
+
+            // make one segment after packing it for the encoding
+            switch(encoding) {
+                case qrcodegen_Mode_NUMERIC:
+                    seg = qrcodegen_makeNumeric(as_str, encoded);
+                    break;
+
+                case qrcodegen_Mode_ALPHANUMERIC:
+                    seg = qrcodegen_makeAlphanumeric(as_str, encoded);
+                    break;
+                
+                default:
+                    mp_raise_ValueError(MP_ERROR_TEXT("encoding"));
+            }
+        }
+
+        ok =  qrcodegen_encodeSegmentsAdvanced(&seg, 1, 
                             ecl, qrcodegen_VERSION_MIN, max_version, mask, boost_ecl,
                             tmp, result);
+    }
 
     if(!ok) {
-        m_del_obj(mp_obj_rendered_qr_t, o);
-        mp_raise_ValueError(MP_ERROR_TEXT("too small; increase QR version"));
+        //m_del_obj(mp_obj_rendered_qr_t, o);
+        mp_raise_ValueError(MP_ERROR_TEXT("QR data overflow"));
     }
+
+    // make the object we are returning.
+    mp_obj_rendered_qr_t *o = m_new_obj_with_finaliser(mp_obj_rendered_qr_t);
+    o->base.type = type;
+    o->rendered = NULL;
 
     // make a copy of the QR data at this point, so it's no bigger than needed.
     // - would be nice if we could tell how big this needs to be based on *actual* version used
@@ -81,17 +157,63 @@ STATIC mp_obj_t rendered_qr_make_new(const mp_obj_type_t *type, size_t n_args, s
 
 // rendered_qr_width()
 //
-// Return width (and height) of QR.
+// Return width (and height) of QR. Should be a ready-only property (accessor)
+// but I can't figure out how to do that. From 21 to 177 inclusive.
 //
     STATIC mp_obj_t
-rendered_qr_width(mp_obj_t self_in) {
+rendered_qr_width(mp_obj_t self_in)
+{
     mp_obj_rendered_qr_t *self = MP_OBJ_TO_PTR(self_in);
-
-    // get square size, from 21 to 177
 
     return MP_OBJ_NEW_SMALL_INT(qrcodegen_getSize(self->rendered));
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(rendered_qr_width_obj, rendered_qr_width);
+
+// rendered_qr_packed()
+//
+// Return (W, H, bytes) 
+// - packed 8 pixels per byte; each row will be rounded up to mod8
+// - QR is left-justified in each row
+//
+    STATIC mp_obj_t
+rendered_qr_packed(mp_obj_t self_in)
+{
+    mp_obj_rendered_qr_t *self = MP_OBJ_TO_PTR(self_in);
+
+    int w = qrcodegen_getSize(self->rendered);
+    int sz = (w + 7) & ~0x7;
+    int pad = sz - w;      // can be zero (but unlikely, since QR's are odd sizes)
+
+    assert(sz % 8 == 0);
+    assert(pad < 8);
+
+    uint8_t pix[(sz/8) * sz], *p=pix;
+
+    for(int y=0; y < w; y++) {
+        uint8_t bm = 0;
+        for(int x=0; x < w; x++) {
+            bool h = qrcodegen_getModule(self->rendered, x, y);
+            bm = (bm << 1) | h;
+
+            if(x == w-1) {
+                bm <<= pad;
+            }
+            if((x % 8 == 7) || (x == w-1)) {
+                *(p++) = bm;
+                bm = 0;
+            }
+        }
+    }
+
+    mp_obj_tuple_t *rv = MP_OBJ_TO_PTR(mp_obj_new_tuple(3, NULL));
+
+    rv->items[0] = MP_OBJ_NEW_SMALL_INT(sz);
+    rv->items[1] = MP_OBJ_NEW_SMALL_INT(w);
+    rv->items[2] = mp_obj_new_bytes(pix, sizeof(pix));
+
+    return MP_OBJ_FROM_PTR(rv);
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(rendered_qr_packed_obj, rendered_qr_packed);
 
 // rendered_qr_get()
 //
@@ -153,6 +275,7 @@ STATIC const mp_rom_map_elem_t rendered_qr_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___del__), MP_ROM_PTR(&rendered_qr_del_obj) },
     { MP_ROM_QSTR(MP_QSTR_width), MP_ROM_PTR(&rendered_qr_width_obj) },
     { MP_ROM_QSTR(MP_QSTR_get), MP_ROM_PTR(&rendered_qr_get_obj) },
+    { MP_ROM_QSTR(MP_QSTR_packed), MP_ROM_PTR(&rendered_qr_packed_obj) },
 };
 STATIC MP_DEFINE_CONST_DICT(rendered_qr_locals_dict, rendered_qr_locals_dict_table);
 
@@ -165,17 +288,6 @@ STATIC const mp_obj_type_t mp_type_rendered_qr = {
 };
 #endif
 
-
-#if 0
-// encode_raw()
-//
-// - Takes any binary, and encodes it to a QR in the format indicated.
-//   Does not look inside for what the data is... You are in charge.
-STATIC mp_obj_t encode_raw(size_t n_args, const mp_obj_t *args)
-{
-}
-MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(encode_raw_obj, 2, 4, encode_raw);
-#endif
 
 #if !MICROPY_ENABLE_DYNRUNTIME
 STATIC const mp_rom_map_elem_t mp_module_uqr_globals_table[] = {
@@ -193,8 +305,7 @@ STATIC const mp_rom_map_elem_t mp_module_uqr_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_Mode_NUMERIC), MP_ROM_INT(qrcodegen_Mode_NUMERIC) },
     { MP_ROM_QSTR(MP_QSTR_Mode_ALPHANUMERIC), MP_ROM_INT(qrcodegen_Mode_ALPHANUMERIC) },
     { MP_ROM_QSTR(MP_QSTR_Mode_BYTE), MP_ROM_INT(qrcodegen_Mode_BYTE) },
-    { MP_ROM_QSTR(MP_QSTR_Mode_KANJI), MP_ROM_INT(qrcodegen_Mode_KANJI) },
-    { MP_ROM_QSTR(MP_QSTR_Mode_ECI), MP_ROM_INT(qrcodegen_Mode_ECI) },
+    // kanji and ECI would be hard to use; no encodings other than UTF-8 in mpy?
 
     // Version range
     { MP_ROM_QSTR(MP_QSTR_VERSION_MIN), MP_ROM_INT(qrcodegen_VERSION_MIN) },
