@@ -1,0 +1,3 @@
+# really a dependancy of micropython/tools/mpy_ld.py
+pyelftools
+
