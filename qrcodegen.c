@@ -81,7 +81,7 @@ testable void setModule(uint8_t qrcode[], int x, int y, bool isBlack);
 testable void setModuleBounded(uint8_t qrcode[], int x, int y, bool isBlack);
 static bool getBit(int x, int i);
 
-testable int calcSegmentBitLength(enum qrcodegen_Mode mode, size_t numChars);
+//int calcSegmentBitLength(enum qrcodegen_Mode mode, size_t numChars);
 testable int getTotalBits(const struct qrcodegen_Segment segs[], size_t len, int version);
 static int numCharCountBits(enum qrcodegen_Mode mode, int version);
 
@@ -844,7 +844,7 @@ size_t qrcodegen_calcSegmentBufferSize(enum qrcodegen_Mode mode, size_t numChars
 // - For byte mode, numChars measures the number of bytes, not Unicode code points.
 // - For ECI mode, numChars must be 0, and the worst-case number of bits is returned.
 //   An actual ECI segment can have shorter data. For non-ECI modes, the result is exact.
-testable int calcSegmentBitLength(enum qrcodegen_Mode mode, size_t numChars) {
+int calcSegmentBitLength(enum qrcodegen_Mode mode, size_t numChars) {
 	// All calculations are designed to avoid overflow on all platforms
 	if (numChars > (unsigned int)INT16_MAX)
 		return -1;

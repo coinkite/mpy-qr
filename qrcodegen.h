@@ -305,6 +305,8 @@ int qrcodegen_getSize(const uint8_t qrcode[]);
  */
 bool qrcodegen_getModule(const uint8_t qrcode[], int x, int y);
 
+// PDG: making public
+int calcSegmentBitLength(enum qrcodegen_Mode mode, size_t numChars);
 
 #ifdef __cplusplus
 }
