@@ -36,3 +36,17 @@ with open('data/result.py', 'wt') as fd:
                                 encoding=uqr.Mode_NUMERIC, mask=m, max_version=1)
                 num += 1
 
+    if 1:
+        make_qr(fd, 'biggest', 'a'*2953, max_version=40)
+
+
+# test for leaks, weak.
+import gc
+b4 = gc.mem_alloc()
+for i in range(1000):
+    a = uqr.make('abc123')
+    del a
+gc.collect()
+aft = gc.mem_alloc()
+
+assert aft <= b4, (b4, aft)

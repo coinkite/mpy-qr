@@ -18,20 +18,6 @@ typedef struct _mp_obj_rendered_qr_t {
     byte    *rendered;
 } mp_obj_rendered_qr_t;
 
-// buffer_for_version()
-//
-// Number of byts of buffer (worse case) needed for a specific version QR
-// - information I suppose for user ... not too useful
-//
-    STATIC mp_obj_t
-buffer_for_version(mp_obj_t x_obj)
-{
-    mp_int_t ver = mp_obj_get_int(x_obj);
-
-    return MP_OBJ_NEW_SMALL_INT(qrcodegen_BUFFER_LEN_FOR_VERSION(ver));
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(buffer_for_version_obj, buffer_for_version);
-
 // rendered_qr_make_new()
 //
 // Constructor: RenderedQR object
@@ -156,9 +142,11 @@ rendered_qr_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, cons
     o->base.type = type;
     o->rendered = NULL;
 
-    // make a copy of the QR data at this point, so it's no bigger than needed.
+    // Make a copy of the QR data at this point, so it's no bigger than needed.
     // - would be nice if we could tell how big this needs to be based on *actual* version used
-    int out_len = qrcodegen_BUFFER_LEN_FOR_VERSION(max_version);
+    // - but I've RE'ed the code, and it's storing image width in first byte, etc.
+    int qrsize = result[0];
+    int out_len = (((qrsize * qrsize) + 7) / 8) + 1;
     o->rendered = (uint8_t *)malloc(out_len);
     memcpy(o->rendered, result, out_len);
 
@@ -325,7 +313,6 @@ STATIC const mp_rom_map_elem_t mp_module_uqr_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_VERSION_MAX), MP_ROM_INT(qrcodegen_VERSION_MAX) },
 
     // Functions 
-    { MP_ROM_QSTR(MP_QSTR_buffer_for_version), MP_ROM_PTR(&buffer_for_version_obj) },
     { MP_ROM_QSTR(MP_QSTR_make), MP_ROM_PTR(&mp_type_rendered_qr) },
 
     // API limitation: can't create QR's with various segments of different types. For optimium
@@ -356,12 +343,30 @@ mpy_init(mp_obj_fun_bc_t *self, size_t n_args, size_t n_kw, mp_obj_t *args)
     // This must be first, it sets up the globals dict and other things
     MP_DYNRUNTIME_INIT_ENTRY
 
+#error "havent figured this out yet"
+
     // XXX need to dup info in mp_module_uqr_globals_table above
     // XXX need to set the globals right (BSS vs. data segment issue)
 #if 0
     // Make the function available in the module's namespace
     mp_store_global(MP_QSTR_factorial, MP_OBJ_FROM_PTR(&factorial_obj));
 #endif
+    mp_store_global(MP_QSTR_ECC_LOW, MP_ROM_INT(qrcodegen_Ecc_LOW));
+    mp_store_global(MP_QSTR_ECC_MEDIUM, MP_ROM_INT(qrcodegen_Ecc_MEDIUM));
+    mp_store_global(MP_QSTR_ECC_QUARTILE, MP_ROM_INT(qrcodegen_Ecc_QUARTILE));
+    mp_store_global(MP_QSTR_ECC_HIGH, MP_ROM_INT(qrcodegen_Ecc_HIGH));
+
+    // QR data encoding modes
+    mp_store_global(MP_QSTR_Mode_NUMERIC, MP_ROM_INT(qrcodegen_Mode_NUMERIC));
+    mp_store_global(MP_QSTR_Mode_ALPHANUMERIC, MP_ROM_INT(qrcodegen_Mode_ALPHANUMERIC));
+    mp_store_global(MP_QSTR_Mode_BYTE, MP_ROM_INT(qrcodegen_Mode_BYTE));
+
+    // Version range
+    mp_store_global(MP_QSTR_VERSION_MIN, MP_ROM_INT(qrcodegen_VERSION_MIN));
+    mp_store_global(MP_QSTR_VERSION_MAX, MP_ROM_INT(qrcodegen_VERSION_MAX));
+
+    // Functions 
+    mp_store_global(MP_QSTR_make, MP_OBJ_FROM_PTR(&mp_type_rendered_qr));
 
     // This must be last, it restores the globals dict
     MP_DYNRUNTIME_INIT_EXIT
