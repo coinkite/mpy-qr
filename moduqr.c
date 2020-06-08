@@ -9,6 +9,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#ifndef MP_ERROR_TEXT
+// support earlier versions of Micropython (1.9.?)
+# define MP_ERROR_TEXT(x)           (x)
+#endif
+
 // Our object. Holds a rendered QR
 typedef struct _mp_obj_rendered_qr_t {
     mp_obj_base_t base;
@@ -326,7 +331,11 @@ const mp_obj_module_t mp_module_uqr = {
     .globals = (mp_obj_dict_t *)&mp_module_uqr_globals,
 };
 
+// support earlier versions of Micropython (1.9.?)
+#ifdef MP_REGISTER_MODULE
 MP_REGISTER_MODULE(MP_QSTR_uqr, mp_module_uqr, 1);
+#endif
+
 #endif
 
 
@@ -335,7 +344,7 @@ MP_REGISTER_MODULE(MP_QSTR_uqr, mp_module_uqr, 1);
 
 // mpy_init()
 //
-// This is the entry point and is called when the module is imported
+// This is the entry point, called when the module is imported.
 //
     mp_obj_t
 mpy_init(mp_obj_fun_bc_t *self, size_t n_args, size_t n_kw, mp_obj_t *args)
@@ -343,14 +352,10 @@ mpy_init(mp_obj_fun_bc_t *self, size_t n_args, size_t n_kw, mp_obj_t *args)
     // This must be first, it sets up the globals dict and other things
     MP_DYNRUNTIME_INIT_ENTRY
 
-#error "havent figured this out yet"
+#error "I havent figured this out yet"
 
     // XXX need to dup info in mp_module_uqr_globals_table above
     // XXX need to set the globals right (BSS vs. data segment issue)
-#if 0
-    // Make the function available in the module's namespace
-    mp_store_global(MP_QSTR_factorial, MP_OBJ_FROM_PTR(&factorial_obj));
-#endif
     mp_store_global(MP_QSTR_ECC_LOW, MP_ROM_INT(qrcodegen_Ecc_LOW));
     mp_store_global(MP_QSTR_ECC_MEDIUM, MP_ROM_INT(qrcodegen_Ecc_MEDIUM));
     mp_store_global(MP_QSTR_ECC_QUARTILE, MP_ROM_INT(qrcodegen_Ecc_QUARTILE));
@@ -391,7 +396,6 @@ void *memmove(void *d, const void *s, size_t n) {
 void *memcpy(void *restrict d, const void *restrict s, size_t n) {
     return __builtin_memcpy(d, s, n);
 }
-
 char *strchr(const char *s, int c) {
     return __builtin_strchr(s, c);
 }
@@ -400,19 +404,20 @@ size_t   strlen(const char *s) {
 }
 #endif
 
-// library uses asserts for out-of-range inputs, so convert those
+// Library uses asserts for out-of-range inputs, so convert those
 // into exceptions which can be handled
+//
+//      >>> uqr.make("abc", encoding=uqr.Mode_NUMERIC)
+//      Traceback (most recent call last):
+//        File "<stdin>", line 1, in <module>
+//      RuntimeError: 906
+//
 #undef assert
 #define assert(e)      ((void) ((e) ? ((void)0) : my_assert (__LINE__)))
 
 void my_assert(int line_num)
 {
-    // little bit of ram waste is better than lots of flash?
-    static char buf[18];
-
-    sprintf(buf, "qrcodegen:%d", line_num);
-
-    mp_raise_msg(&mp_type_RuntimeError, buf);
+    nlr_raise(mp_obj_new_exception_arg1(&mp_type_RuntimeError, MP_OBJ_NEW_SMALL_INT(line_num)));
 }
 
 #include "qrcodegen.c"
