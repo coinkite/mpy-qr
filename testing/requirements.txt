@@ -1,0 +1,4 @@
+# these required on only for testing purposes
+pytest
+zbar-py
+Pillow

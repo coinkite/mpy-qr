@@ -21,7 +21,8 @@
  *   Software.
  */
 
-#include <assert.h>
+// We've replaced assert() with an exception generator.
+//#include <assert.h>
 #include <limits.h>
 #include <stdlib.h>
 #include <string.h>

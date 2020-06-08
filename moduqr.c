@@ -105,36 +105,40 @@ rendered_qr_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, cons
     if(encoding == 0) {
         const char *as_str = mp_obj_str_get_str(args[0].u_obj);
 
-        // auto mode: pick best mode (sic) ... slower, simplistic; assumes string input
+        // Auto mode: pick best mode (sic) ... slower, simplistic; assumes string input
         ok =  qrcodegen_encodeText(as_str, tmp, result, 
                             ecl, min_version, max_version, mask, boost_ecl);
-    } else {
+    } else if(encoding == qrcodegen_Mode_BYTE) {
+        // Pure binary mode.
         struct qrcodegen_Segment seg;
 
-        if(encoding == qrcodegen_Mode_BYTE) {
-            // work in-place, makes no assumptions about NUL bytes
-            seg.mode = qrcodegen_Mode_BYTE;
-            seg.numChars = bufinfo.len;
-            seg.bitLength = calcSegmentBitLength(seg.mode, bufinfo.len);
-            seg.data = bufinfo.buf;
-        } else {
-            // library assumes incoming is text, 0-terminated strings.
-            const char *as_str = mp_obj_str_get_str(args[0].u_obj);
-            uint8_t     encoded[strlen(as_str)+10];
+        // work in-place, makes no assumptions about NUL bytes
+        seg.mode = qrcodegen_Mode_BYTE;
+        seg.numChars = bufinfo.len;
+        seg.bitLength = calcSegmentBitLength(seg.mode, bufinfo.len);
+        seg.data = bufinfo.buf;
 
-            // make one segment after packing it for the encoding
-            switch(encoding) {
-                case qrcodegen_Mode_NUMERIC:
-                    seg = qrcodegen_makeNumeric(as_str, encoded);
-                    break;
+        ok =  qrcodegen_encodeSegmentsAdvanced(&seg, 1, 
+                            ecl, min_version, max_version, mask, boost_ecl,
+                            tmp, result);
+    } else {
+        // library assumes incoming is text, NUL-terminated strings.
+        const char *as_str = mp_obj_str_get_str(args[0].u_obj);
+        uint8_t     encoded[strlen(as_str)+10];
+        struct qrcodegen_Segment seg;
 
-                case qrcodegen_Mode_ALPHANUMERIC:
-                    seg = qrcodegen_makeAlphanumeric(as_str, encoded);
-                    break;
-                
-                default:
-                    mp_raise_ValueError(MP_ERROR_TEXT("encoding"));
-            }
+        // make one segment after packing it for the indicated encoding
+        switch(encoding) {
+            case qrcodegen_Mode_NUMERIC:
+                seg = qrcodegen_makeNumeric(as_str, encoded);
+                break;
+
+            case qrcodegen_Mode_ALPHANUMERIC:
+                seg = qrcodegen_makeAlphanumeric(as_str, encoded);
+                break;
+            
+            default:
+                mp_raise_ValueError(MP_ERROR_TEXT("encoding"));
         }
 
         ok =  qrcodegen_encodeSegmentsAdvanced(&seg, 1, 
