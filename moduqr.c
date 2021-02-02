@@ -36,7 +36,7 @@ rendered_qr_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, cons
 
     enum {ARG_message, ARG_encoding, ARG_max_version, ARG_min_version, ARG_mask, ARG_ecl};
     const mp_arg_t allowed_args[] = {
-        { MP_QSTR_message, MP_ARG_OBJ|MP_ARG_REQUIRED },
+        { MP_QSTR_message, MP_ARG_OBJ|MP_ARG_REQUIRED, {}},
         { MP_QSTR_encoding, MP_ARG_INT, { .u_int = 0 } },
         { MP_QSTR_max_version, MP_ARG_INT, { .u_int = 10 } },
         { MP_QSTR_min_version, MP_ARG_INT, { .u_int = 1 } },
@@ -413,9 +413,9 @@ size_t   strlen(const char *s) {
 //      RuntimeError: 906
 //
 #undef assert
-#define assert(e)      ((void) ((e) ? ((void)0) : my_assert (__LINE__)))
+#define assert(e)      ((void) ((e) ? ((void)0) : _uqr_assert (__LINE__)))
 
-void my_assert(int line_num)
+void _uqr_assert(int line_num)
 {
     nlr_raise(mp_obj_new_exception_arg1(&mp_type_RuntimeError, MP_OBJ_NEW_SMALL_INT(line_num)));
 }
