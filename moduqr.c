@@ -331,12 +331,11 @@ const mp_obj_module_t mp_module_uqr = {
     .globals = (mp_obj_dict_t *)&mp_module_uqr_globals,
 };
 
-// support earlier versions of Micropython (1.9.?)
-#ifdef MP_REGISTER_MODULE
-MP_REGISTER_MODULE(MP_QSTR_uqr, mp_module_uqr, 1);
-#endif
+
 
 #endif
+
+MP_REGISTER_MODULE(MP_QSTR_uqr, mp_module_uqr, 1);
 
 
 // Linking glue for dyno-loaded module

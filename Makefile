@@ -1,15 +1,11 @@
-# Location of top-level MicroPython directory
-MPY_DIR = ../micropython
+MPY_DIR = libs/micropython
+MOD = ngu
 
-# Name of target module
-MOD = uqr
-
-# Source files (.c or .py)
-SRC = moduqr.c
+SRC = modngu.c
 
 # Architecture to build for (x86, x64, armv7m, xtensa, xtensawin)
-ARCH ?= xtensawin
-#ARCH ?= x64
+#ARCH ?= xtensawin
+ARCH ?= x64
 
 CFLAGS += -lgcc
 
