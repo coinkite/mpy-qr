@@ -1,18 +1,9 @@
-MPY_DIR = libs/micropython
-MOD = ngu
+# Example only; use micropython.mk via USER_C_MODULES in your project
 
-SRC = modngu.c
-
-# Architecture to build for (x86, x64, armv7m, xtensa, xtensawin)
-#ARCH ?= xtensawin
-ARCH ?= x64
-
-CFLAGS += -lgcc
-
-CLEAN_EXTRA = $(MOD).mpy
-
-# Include to get the rules for compiling and linking the module
-include $(MPY_DIR)/py/dynruntime.mk
+all:
+	@echo
+	@echo Add: USER_C_MODULES=$(realpath $(PWD)/..) to your mp...mk makefile
+	@echo
 
 tags:
 	ctags -f .tags *.[ch]
