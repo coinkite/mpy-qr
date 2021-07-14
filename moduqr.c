@@ -138,7 +138,6 @@ rendered_qr_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, cons
     }
 
     if(!ok) {
-        //m_del_obj(mp_obj_rendered_qr_t, o);
         mp_raise_ValueError(MP_ERROR_TEXT("QR data overflow"));
     }
 
@@ -330,13 +329,9 @@ const mp_obj_module_t mp_module_uqr = {
     .base = { &mp_type_module },
     .globals = (mp_obj_dict_t *)&mp_module_uqr_globals,
 };
-
-
-
 #endif
 
 MP_REGISTER_MODULE(MP_QSTR_uqr, mp_module_uqr, 1);
-
 
 // Linking glue for dyno-loaded module
 #if MICROPY_ENABLE_DYNRUNTIME
@@ -375,7 +370,6 @@ mpy_init(mp_obj_fun_bc_t *self, size_t n_args, size_t n_kw, mp_obj_t *args)
     // This must be last, it restores the globals dict
     MP_DYNRUNTIME_INIT_EXIT
 }
-
 
 
 #if !defined(__linux__)
