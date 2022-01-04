@@ -151,7 +151,7 @@ rendered_qr_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, cons
     // - but I've RE'ed the code, and it's storing image width in first byte, etc.
     int qrsize = result[0];
     int out_len = (((qrsize * qrsize) + 7) / 8) + 1;
-    o->rendered = (uint8_t *)malloc(out_len);
+    o->rendered = (uint8_t *)m_malloc(out_len);
     memcpy(o->rendered, result, out_len);
 
     return MP_OBJ_FROM_PTR(o);
@@ -268,7 +268,7 @@ rendered_qr_del(mp_obj_t self_in) {
     mp_obj_rendered_qr_t *self = MP_OBJ_TO_PTR(self_in);
 
     if(self->rendered) {
-        free((void *)self->rendered);
+        m_free((void *)self->rendered);
         self->rendered = NULL;
     }
 
