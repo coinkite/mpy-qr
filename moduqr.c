@@ -285,13 +285,14 @@ STATIC const mp_rom_map_elem_t rendered_qr_locals_dict_table[] = {
 };
 STATIC MP_DEFINE_CONST_DICT(rendered_qr_locals_dict, rendered_qr_locals_dict_table);
 
-STATIC const mp_obj_type_t mp_type_rendered_qr = {
-    { &mp_type_type },
-    .name = MP_QSTR_RenderedQR,
-    .make_new = rendered_qr_make_new,
-    .print = mp_obj_rendered_qr_print,
-    .locals_dict = (mp_obj_dict_t *)&rendered_qr_locals_dict,
-};
+STATIC MP_DEFINE_CONST_OBJ_TYPE(
+    mp_type_rendered_qr,
+    MP_QSTR_RenderedQR,
+    MP_TYPE_FLAG_NONE,
+    print, mp_obj_rendered_qr_print,
+    make_new, rendered_qr_make_new,
+    locals_dict, &rendered_qr_locals_dict
+);
 #endif
 
 
