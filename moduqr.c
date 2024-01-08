@@ -293,6 +293,7 @@ STATIC const mp_rom_map_elem_t rendered_qr_locals_dict_table[] = {
 };
 STATIC MP_DEFINE_CONST_DICT(rendered_qr_locals_dict, rendered_qr_locals_dict_table);
 
+#if (MICROPY_VERSION_MAJOR == 1) && (MICROPY_VERSION_MINOR < 20)
 STATIC const mp_obj_type_t mp_type_rendered_qr = {
     { &mp_type_type },
     .name = MP_QSTR_RenderedQR,
@@ -300,6 +301,16 @@ STATIC const mp_obj_type_t mp_type_rendered_qr = {
     .print = mp_obj_rendered_qr_print,
     .locals_dict = (mp_obj_dict_t *)&rendered_qr_locals_dict,
 };
+#else
+STATIC MP_DEFINE_CONST_OBJ_TYPE(
+    mp_type_rendered_qr,
+    MP_QSTR_RenderedQR,
+    MP_TYPE_FLAG_NONE,
+    make_new, rendered_qr_make_new,
+    print, mp_obj_rendered_qr_print,
+    locals_dict, &rendered_qr_locals_dict
+);
+#endif
 #endif
 
 
@@ -339,10 +350,10 @@ const mp_obj_module_t mp_module_uqr = {
 };
 #endif
 
-#if MICROPY_VERSION >= 0x011300
-MP_REGISTER_MODULE(MP_QSTR_uqr, mp_module_uqr);
+#if (MICROPY_VERSION_MAJOR == 1) && (MICROPY_VERSION_MINOR < 19)
+MP_REGISTER_MODULE(MP_QSTR_uqr, mp_module_uqr, 1)
 #else
-MP_REGISTER_MODULE(MP_QSTR_uqr, mp_module_uqr, 1);
+MP_REGISTER_MODULE(MP_QSTR_uqr, mp_module_uqr)
 #endif
 
 // Linking glue for dyno-loaded module
