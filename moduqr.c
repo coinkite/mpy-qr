@@ -175,6 +175,26 @@ rendered_qr_width(mp_obj_t self_in)
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(rendered_qr_width_obj, rendered_qr_width);
 
+// rendered_qr_version()
+//
+// Return version (and height) of rendered QR. Should be a ready-only property (accessor)
+// but I can't figure out how to do that. From 1 to 40 inclusive.
+//
+    STATIC mp_obj_t
+rendered_qr_version(mp_obj_t self_in)
+{
+    mp_obj_rendered_qr_t *self = MP_OBJ_TO_PTR(self_in);
+
+    int qrsize = qrcodegen_getSize(self->rendered);     // copies first byte
+
+	// inverse of: qrsize = version * 4 + 17;
+    int version = (qrsize - 17) / 4;
+
+    return MP_OBJ_NEW_SMALL_INT(version);
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(rendered_qr_version_obj, rendered_qr_version);
+
+
 // rendered_qr_packed()
 //
 // Return (W, H, pixels)
@@ -290,6 +310,7 @@ STATIC const mp_rom_map_elem_t rendered_qr_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_width), MP_ROM_PTR(&rendered_qr_width_obj) },
     { MP_ROM_QSTR(MP_QSTR_get), MP_ROM_PTR(&rendered_qr_get_obj) },
     { MP_ROM_QSTR(MP_QSTR_packed), MP_ROM_PTR(&rendered_qr_packed_obj) },
+    { MP_ROM_QSTR(MP_QSTR_version), MP_ROM_PTR(&rendered_qr_version_obj) },
 };
 STATIC MP_DEFINE_CONST_DICT(rendered_qr_locals_dict, rendered_qr_locals_dict_table);
 

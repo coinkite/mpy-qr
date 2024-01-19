@@ -56,6 +56,8 @@ object <module 'uqr'> is of type module
 
 >>> q.width()
 21
+>>> q.version()
+1
 >>> q.get(3,3)
 True
 >>> q.packed()
@@ -69,6 +71,7 @@ object ...
   width -- <function>
   get -- <function>
   packed -- <function>
+  version -- <function>
 ```
 
 ### Docs
@@ -93,6 +96,7 @@ Returns a `RenderedQR` object, with these methods:
 
 - `__str__` renders as a QR code (mostly for fun)
 - `width()` return number of pixels in the QR code (be sure to add some whitespace around that)
+- `version()` returns the version number (1..40) that was used
 - `get(x, y)` return pixel value at that location.
 - `packed()` returns a 3-tuple with `(width, height, pixel_data)`. Pixel data is 8-bit packed, and
   padded so that each row is byte-aligned. The padding is at the right side of the image
