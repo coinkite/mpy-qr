@@ -17,6 +17,7 @@ with open('data/result.py', 'wt') as fd:
         q2 = make_qr(fd, 'uppercase', 'ABC'*50)
 
         assert q2.width() < q.width()       # autodect alnum works
+        assert q2.version() < q.version()
 
         q3 = make_qr(fd, 'byte_upper', 'ABC'*50, encoding=uqr.Mode_BYTE)
         assert q3.width() != q2.width()      # force bytes works
