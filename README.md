@@ -9,6 +9,7 @@ written by [@nayuki](https://github.com/nayuki) and published under MIT license.
 
 - almost able to be compiled into a native-code `.mpy` file, but not quite
 - does not support Kanji or ECI modes
+- to support micropython versions below 1.19 `mpy-1-19-pre.patch` needs to be applied prior to building
 
 ## Example
 
