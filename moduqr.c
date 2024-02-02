@@ -371,8 +371,20 @@ const mp_obj_module_t mp_module_uqr = {
 };
 #endif
 
-// After mpy 1.19, the "1" argument needs to be removed here.
+#if (MICROPY_VERSION_MAJOR == 1) && (MICROPY_VERSION_MINOR < 19)
+// For compat with mpy<1.19, this macro needs a 3rd arg (enable) but
+// this file parsed by micropython/py/makemoduledefs.py
+// and it doesn't understand CPP conditionals... nor comments, so abuse
+// that a little.
+//
+/* This line will be interpreted by makemoduledefs.py, but is a comment.
 MP_REGISTER_MODULE(MP_QSTR_uqr, mp_module_uqr, 1);
+*/
+#undef MP_REGISTER_MODULE
+#define MP_REGISTER_MODULE(a,b)       /*empty*/
+#endif
+
+MP_REGISTER_MODULE/**/(MP_QSTR_uqr, mp_module_uqr);
 
 // Linking glue for dyno-loaded module
 #if MICROPY_ENABLE_DYNRUNTIME
