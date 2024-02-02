@@ -371,11 +371,8 @@ const mp_obj_module_t mp_module_uqr = {
 };
 #endif
 
-#if (MICROPY_VERSION_MAJOR == 1) && (MICROPY_VERSION_MINOR < 19)
-MP_REGISTER_MODULE(MP_QSTR_uqr, mp_module_uqr, 1)
-#else
-MP_REGISTER_MODULE(MP_QSTR_uqr, mp_module_uqr)
-#endif
+// After mpy 1.19, the "1" argument needs to be removed here.
+MP_REGISTER_MODULE(MP_QSTR_uqr, mp_module_uqr, 1);
 
 // Linking glue for dyno-loaded module
 #if MICROPY_ENABLE_DYNRUNTIME
